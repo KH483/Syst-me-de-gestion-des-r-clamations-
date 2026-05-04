@@ -6,7 +6,7 @@ import { AuthRequest, AuthResponse } from '../models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl = 'http://localhost:9090/api/auth';
+  private apiUrl = '/api/auth';
   private currentUserSubject = new BehaviorSubject<AuthResponse | null>(this.getStoredUser());
   currentUser$ = this.currentUserSubject.asObservable();
   role$ = this.currentUserSubject.pipe(map(u => u?.role || ''));
