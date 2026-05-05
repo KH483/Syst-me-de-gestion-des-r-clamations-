@@ -6,7 +6,7 @@ import { Statistiques } from '../models/auth.model';
 
 @Injectable({ providedIn: 'root' })
 export class ReclamationService {
-  private apiUrl = 'http://localhost:9090/api/reclamations';
+  private apiUrl = '/api/reclamations';
 
   constructor(private http: HttpClient) {}
 
