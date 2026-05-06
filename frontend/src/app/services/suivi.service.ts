@@ -5,7 +5,7 @@ import { SuiviReclamation } from '../models/suivi.model';
 
 @Injectable({ providedIn: 'root' })
 export class SuiviService {
-  private apiUrl = 'http://localhost:9090/api/suivis';
+  private apiUrl = '/api/suivis';
 
   constructor(private http: HttpClient) {}
 

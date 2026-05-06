@@ -6,7 +6,7 @@ import { Page } from '../models/reclamation.model';
 
 @Injectable({ providedIn: 'root' })
 export class AgentService {
-  private apiUrl = 'http://localhost:9090/api/agents';
+  private apiUrl = '/api/agents';
 
   constructor(private http: HttpClient) {}
 
