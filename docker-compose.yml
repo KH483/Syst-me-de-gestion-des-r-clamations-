@@ -1,0 +1,56 @@
+services:
+
+  # ── MySQL ──────────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: reclamations-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: reclamations_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - reclamations-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Spring Boot ────────────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: reclamations-backend
+    ports:
+      - "9090:9090"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/reclamations_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - reclamations-network
+
+  # ── Frontend Angular ───────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    container_name: reclamations-frontend
+    ports:
+      - "4200:80"
+    environment:
+      BACKEND_URL: http://backend:9090
+    depends_on:
+      - backend
+    networks:
+      - reclamations-network
+
+volumes:
+  mysql_data:
+
+networks:
+  reclamations-network:
+    driver: bridge
