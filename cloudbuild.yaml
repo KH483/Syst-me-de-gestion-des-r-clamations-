@@ -1,0 +1,167 @@
+steps:
+  # ── Build Backend ──────────────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-backend'
+    args:
+      - 'build'
+      - '--no-cache'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/projet2glb/reclamations-repo/backend'
+      - './backend'
+
+  # ── Push Backend ───────────────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-backend'
+    waitFor: ['build-backend']
+    args:
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/projet2glb/reclamations-repo/backend'
+
+  # ── Build Frontend ─────────────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'build-frontend'
+    args:
+      - 'build'
+      - '-t'
+      - 'europe-west1-docker.pkg.dev/projet2glb/reclamations-repo/frontend'
+      - './frontend'
+
+  # ── Push Frontend ──────────────────────────────────────────────────────────
+  - name: 'gcr.io/cloud-builders/docker'
+    id: 'push-frontend'
+    waitFor: ['build-frontend']
+    args:
+      - 'push'
+      - 'europe-west1-docker.pkg.dev/projet2glb/reclamations-repo/frontend'
+
+  # ── Get GKE Credentials ────────────────────────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'get-credentials'
+    waitFor: ['push-backend', 'push-frontend']
+    entrypoint: 'gcloud'
+    args:
+      - 'container'
+      - 'clusters'
+      - 'get-credentials'
+      - 'cluster-1'
+      - '--zone=us-central1-a'
+      - '--project=projet2glb'
+
+  # ── Create Namespaces ──────────────────────────────────────────────────────
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'create-namespaces'
+    waitFor: ['get-credentials']
+    entrypoint: 'kubectl'
+    args:
+      - 'apply'
+      - '-f'
+      - 'k8s/namespaces.yaml'
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # NAMESPACE: test
+  # ══════════════════════════════════════════════════════════════════════════
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-test-secrets'
+    waitFor: ['create-namespaces']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/test/secrets.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-test-configmap'
+    waitFor: ['deploy-test-secrets']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/test/configmap.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-test-mysql'
+    waitFor: ['deploy-test-configmap']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/test/mysql-deployment.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-test-backend'
+    waitFor: ['deploy-test-mysql']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/test/backend-deployment.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-test-frontend'
+    waitFor: ['deploy-test-backend']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/test/frontend-deployment.yaml']
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # NAMESPACE: dev
+  # ══════════════════════════════════════════════════════════════════════════
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-dev-secrets'
+    waitFor: ['create-namespaces']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/dev/secrets.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-dev-configmap'
+    waitFor: ['deploy-dev-secrets']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/dev/configmap.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-dev-mysql'
+    waitFor: ['deploy-dev-configmap']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/dev/mysql-deployment.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-dev-backend'
+    waitFor: ['deploy-dev-mysql']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/dev/backend-deployment.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-dev-frontend'
+    waitFor: ['deploy-dev-backend']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/dev/frontend-deployment.yaml']
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # NAMESPACE: production
+  # ══════════════════════════════════════════════════════════════════════════
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-prod-secrets'
+    waitFor: ['create-namespaces']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/production/secrets.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-prod-configmap'
+    waitFor: ['deploy-prod-secrets']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/production/configmap.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-prod-mysql'
+    waitFor: ['deploy-prod-configmap']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/production/mysql-deployment.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-prod-backend'
+    waitFor: ['deploy-prod-mysql']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/production/backend-deployment.yaml']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-prod-frontend'
+    waitFor: ['deploy-prod-backend']
+    entrypoint: 'kubectl'
+    args: ['apply', '-f', 'k8s/production/frontend-deployment.yaml']
+
+images:
+  - 'europe-west1-docker.pkg.dev/projet2glb/reclamations-repo/backend'
+  - 'europe-west1-docker.pkg.dev/projet2glb/reclamations-repo/frontend'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
